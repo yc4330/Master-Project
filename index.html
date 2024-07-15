@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>US-China Collaborations in NIH paper per Year</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .line {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 2px;
+        }
+        .axis-label {
+            font-size: 14px;
+        }
+        .title {
+            font-size: 24px;
+            text-anchor: middle;
+        }
+        .slider {
+            margin-left: 300px;
+            width: 300px;
+        }
+        .annotation {
+            stroke: red;
+            stroke-width: 2px;
+        }
+        .annotation-text {
+            font-size: 14px;
+            fill: red;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart"></div>
+    <div>
+        <input type="range" min="1" max="50" value="50" class="slider" id="rowSlider">
+        <label for="rowSlider">Top X scholars: <span id="rowValue">50</span></label>
+    </div>
+    <script>
+        // Set dimensions and margins
+        const margin = { top: 50, right: 30, bottom: 50, left: 60 },
+              width = 800 - margin.left - margin.right,
+              height = 500 - margin.top - margin.bottom;
+
+        // Create SVG container
+        const svg = d3.select("#chart")
+                      .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                      .append("g")
+                      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        let data;
+        let rowCount;
+
+        // Load data
+        d3.csv("author_df.csv").then(csvData => {
+            data = csvData;
+            rowCount = data.length;
+
+            // Update slider max value
+            d3.select("#rowSlider").attr("max", rowCount);
+
+            // Parse data
+            data.forEach(d => {
+                d.yearly_contributions = {};
+                for (let year = 2007; year <= 2024; year++) {
+                    d.yearly_contributions[year] = +d[year];
+                }
+            });
+
+            // Draw initial chart
+            updateChart(50);
+
+            // Add event listener to slider
+            d3.select("#rowSlider").on("input", function() {
+                const rowValue = +this.value;
+                d3.select("#rowValue").text(rowValue);
+                updateChart(rowValue);
+            });
+        }).catch(error => {
+            console.error("Error loading the CSV file: ", error);
+        });
+
+        function updateChart(rowValue) {
+            // Calculate total contributions for each year for the first x rows
+            const totalContributions = [];
+            for (let year = 2007; year <= 2024; year++) {
+                const total = data.slice(0, rowValue).reduce((sum, row) => sum + row.yearly_contributions[year], 0);
+                totalContributions.push({ year: year, contributions: total });
+            }
+
+            // Set scales
+            const x = d3.scaleLinear()
+                        .domain(d3.extent(totalContributions, d => d.year))
+                        .range([0, width]);
+
+            const y = d3.scaleLinear()
+                        .domain([0, d3.max(totalContributions, d => d.contributions)])
+                        .range([height, 0]);
+
+            // Define line
+            const line = d3.line()
+                           .x(d => x(d.year))
+                           .y(d => y(d.contributions));
+
+            // Clear previous chart
+            svg.selectAll("*").remove();
+
+            // Add X axis
+            svg.append("g")
+               .attr("transform", `translate(0,${height})`)
+               .call(d3.axisBottom(x).tickFormat(d3.format("d")));
+
+            // Add Y axis
+            svg.append("g")
+               .call(d3.axisLeft(y));
+
+            // Add line
+            svg.append("path")
+               .datum(totalContributions)
+               .attr("class", "line")
+               .attr("d", line);
+
+            // Add X axis label
+            svg.append("text")
+               .attr("class", "axis-label")
+               .attr("text-anchor", "end")
+               .attr("x", width / 2)
+               .attr("y", height + margin.bottom - 10)
+               .text("Year");
+
+            // Add Y axis label
+            svg.append("text")
+               .attr("class", "axis-label")
+               .attr("text-anchor", "end")
+               .attr("transform", "rotate(-90)")
+               .attr("y", -margin.left + 20)
+               .attr("x", -height / 2)
+               .text("Total Contributions");
+
+            // Add title
+            svg.append("text")
+               .attr("class", "title")
+               .attr("x", width / 2)
+               .attr("y", -10)
+               .text("US-China Collaborations in NIH paper per Year from 2007 to 2024");
+
+            // Add vertical line for China Initiative
+            const initiativeYear = 2018 + 11/12;
+            svg.append("line")
+               .attr("x1", x(initiativeYear))
+               .attr("x2", x(initiativeYear))
+               .attr("y1", 0)
+               .attr("y2", height)
+               .attr("class", "annotation");
+
+            // Add text label for China Initiative
+            svg.append("text")
+               .attr("x", x(initiativeYear) + 5)
+               .attr("y", y(d3.max(totalContributions, d => d.contributions)))
+               .attr("class", "annotation-text")
+               .text("China Initiative started");
+        }
+    </script>
+</body>
+</html>
