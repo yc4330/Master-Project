@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>US-China Collaborations in NIH paper per Year</title>
+    <title>Total Contributions per Year</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         .line {
@@ -18,8 +18,7 @@
             text-anchor: middle;
         }
         .slider {
-            margin-left: 300px;
-            width: 300px;
+            width: 400px;
         }
         .annotation {
             stroke: red;
@@ -29,13 +28,18 @@
             font-size: 14px;
             fill: red;
         }
+        .range-slider {
+            width: 300px;
+            margin: 20px;
+        }
     </style>
 </head>
 <body>
     <div id="chart"></div>
-    <div>
-        <input type="range" min="1" max="50" value="50" class="slider" id="rowSlider">
-        <label for="rowSlider">Top X scholars: <span id="rowValue">50</span></label>
+    <div class="range-slider">
+        <label for="rangeSlider">Select range: <span id="rangeValue">1 - 50</span></label>
+        <input type="range" min="1" max="50" value="1" class="slider" id="rangeStart">
+        <input type="range" min="1" max="50" value="50" class="slider" id="rangeEnd">
     </div>
     <script>
         // Set dimensions and margins
@@ -60,7 +64,8 @@
             rowCount = data.length;
 
             // Update slider max value
-            d3.select("#rowSlider").attr("max", rowCount);
+            d3.select("#rangeStart").attr("max", rowCount);
+            d3.select("#rangeEnd").attr("max", rowCount);
 
             // Parse data
             data.forEach(d => {
@@ -71,23 +76,35 @@
             });
 
             // Draw initial chart
-            updateChart(50);
+            updateChart(1, 50);
 
-            // Add event listener to slider
-            d3.select("#rowSlider").on("input", function() {
-                const rowValue = +this.value;
-                d3.select("#rowValue").text(rowValue);
-                updateChart(rowValue);
+            // Add event listeners to sliders
+            d3.select("#rangeStart").on("input", function() {
+                const startValue = +this.value;
+                const endValue = +d3.select("#rangeEnd").property("value");
+                if (startValue <= endValue) {
+                    d3.select("#rangeValue").text(`${startValue} - ${endValue}`);
+                    updateChart(startValue, endValue);
+                }
+            });
+
+            d3.select("#rangeEnd").on("input", function() {
+                const endValue = +this.value;
+                const startValue = +d3.select("#rangeStart").property("value");
+                if (startValue <= endValue) {
+                    d3.select("#rangeValue").text(`${startValue} - ${endValue}`);
+                    updateChart(startValue, endValue);
+                }
             });
         }).catch(error => {
             console.error("Error loading the CSV file: ", error);
         });
 
-        function updateChart(rowValue) {
-            // Calculate total contributions for each year for the first x rows
+        function updateChart(startRow, endRow) {
+            // Calculate total contributions for each year for the specified range of rows
             const totalContributions = [];
             for (let year = 2007; year <= 2024; year++) {
-                const total = data.slice(0, rowValue).reduce((sum, row) => sum + row.yearly_contributions[year], 0);
+                const total = data.slice(startRow - 1, endRow).reduce((sum, row) => sum + row.yearly_contributions[year], 0);
                 totalContributions.push({ year: year, contributions: total });
             }
 
@@ -145,7 +162,7 @@
                .attr("class", "title")
                .attr("x", width / 2)
                .attr("y", -10)
-               .text("US-China Collaborations in NIH paper per Year from 2007 to 2024");
+               .text("US-China NIH Collaboration per Year from 2007 to 2024");
 
             // Add vertical line for China Initiative
             const initiativeYear = 2018 + 11/12;
