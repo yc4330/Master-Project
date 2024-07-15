@@ -138,6 +138,11 @@ Additional information on nationality or country of origin, beyond China, can be
 
 ### Data Analysis
 
+| Year | Non-Asian | Asian | Chinese|
+| ------- | ------- | ------- | ------- |
+|2023|52131|32662|9499|
+|2022|52050|31680|9078|
+
 ### Visualization
 
 ## US-China Collaboration from NIH Paper 
